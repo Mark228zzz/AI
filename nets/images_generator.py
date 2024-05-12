@@ -4,24 +4,29 @@ import torch.nn as nn
 import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
+from time import time
 import matplotlib.pyplot as plt
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 transform = transforms.Compose([
-    transforms.Resize(64),
-    transforms.CenterCrop(64),
+    transforms.Resize(512),
+    transforms.CenterCrop(512),
     transforms.ToTensor(),
     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
 ])
+
 dataset = datasets.ImageFolder(root=f'{os.path.dirname(os.path.abspath(__file__))}/data/images_generator', transform=transform)
-dataloader = DataLoader(dataset, batch_size=128, shuffle=True)
+dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
 
 class Generator(nn.Module):
     def __init__(self, nz, ngf, nc):
         super(Generator, self).__init__()
         self.main = nn.Sequential(
-            nn.ConvTranspose2d(nz, ngf * 8, 4, 1, 0, bias=False),
+            nn.ConvTranspose2d(nz, ngf * 16, 4, 1, 0, bias=False),
+            nn.BatchNorm2d(ngf * 16),
+            nn.ReLU(True),
+            nn.ConvTranspose2d(ngf * 16, ngf * 8, 4, 2, 1, bias=False),
             nn.BatchNorm2d(ngf * 8),
             nn.ReLU(True),
             nn.ConvTranspose2d(ngf * 8, ngf * 4, 4, 2, 1, bias=False),
@@ -33,7 +38,10 @@ class Generator(nn.Module):
             nn.ConvTranspose2d(ngf * 2, ngf, 4, 2, 1, bias=False),
             nn.BatchNorm2d(ngf),
             nn.ReLU(True),
-            nn.ConvTranspose2d(ngf, nc, 4, 2, 1, bias=False),
+            nn.ConvTranspose2d(ngf, ngf // 2, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(ngf // 2),
+            nn.ReLU(True),
+            nn.ConvTranspose2d(ngf // 2, nc, 4, 2, 1, bias=False),
             nn.Tanh()
         )
 
@@ -55,7 +63,12 @@ class Discriminator(nn.Module):
             nn.Conv2d(ndf * 4, ndf * 8, 4, 2, 1, bias=False),
             nn.BatchNorm2d(ndf * 8),
             nn.LeakyReLU(0.2, inplace=True),
-            nn.Conv2d(ndf * 8, 1, 4, 1, 0, bias=False),
+            nn.Conv2d(ndf * 8, ndf * 16, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(ndf * 16),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.AdaptiveAvgPool2d(1),
+            nn.Conv2d(ndf * 16, 1, 1),
+            nn.Flatten(),
             nn.Sigmoid()
         )
 
@@ -85,7 +98,7 @@ optimizerD = optim.Adam(netD.parameters(), lr=0.0002, betas=(0.5, 0.999))
 optimizerG = optim.Adam(netG.parameters(), lr=0.0002, betas=(0.5, 0.999))
 criterion = nn.BCELoss()
 
-num_epochs = 5000
+num_epochs = 460
 for epoch in range(num_epochs):
     for i, data in enumerate(dataloader, 0):
         netD.zero_grad()
@@ -116,16 +129,18 @@ for epoch in range(num_epochs):
         D_G_z2 = output.mean().item()
         optimizerG.step()
 
-    if epoch % 1 == 0:
-        print(f'Epoch {epoch+1}/{num_epochs} [{i}/{len(dataloader)}] Loss_D: {errD.item():.4f} Loss_G: {errG.item():.4f} D(x): {D_x:.4f} D(G(z)): {D_G_z1:.4f} / {D_G_z2:.4f}')
+        if epoch % 1 == 0:
+            print(f'Epoch {epoch+1}/{num_epochs} [{i}/{len(dataloader)}] Loss_D: {errD.item():.4f} Loss_G: {errG.item():.4f} D(x): {D_x:.4f} D(G(z)): {D_G_z1:.4f} / {D_G_z2:.4f}')
 
 with torch.no_grad():
     noise = torch.randn(1, nz, 1, 1, device=device)
     fake = netG(noise).detach().cpu()
 
-plt.figure(figsize=(5,5))
+plt.figure(figsize=(8,8))
+plt.axis("off")
+plt.title("Generated Image")
 plt.imshow(fake[0].permute(1, 2, 0) * 0.5 + 0.5)
 plt.show()
 
-torch.save(netD, 'NetD.pth')
-torch.save(netG, 'NetG.pth')
+torch.save(netG, 'NetG_460_512x512.pth')
+torch.save(netD, 'NetD_460_512x512.pth')
