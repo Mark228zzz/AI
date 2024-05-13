@@ -1,7 +1,7 @@
 import torch
 from time import time
 
-size = (10000, 10000)
+size = (10_000, 10_000)
 
 def main() -> None:
     start_time_cpu = time()
