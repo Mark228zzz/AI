@@ -136,7 +136,7 @@ with torch.no_grad():
     noise = torch.randn(1, nz, 1, 1, device=device)
     fake = netG(noise).detach().cpu()
 
-plt.figure(figsize=(8,8))
+plt.figure(figsize=(8, 8))
 plt.axis("off")
 plt.title("Generated Image")
 plt.imshow(fake[0].permute(1, 2, 0) * 0.5 + 0.5)
