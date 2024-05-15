@@ -96,6 +96,9 @@ def create_new_module(*, should_create_new_module: bool, module_names: tuple[str
     if should_create_new_module:
         netG = Generator(nz, ngf, nc).to(device)
         netD = Discriminator(ndf, nc).to(device)
+
+        netG.apply(weights_init)
+        netD.apply(weights_init)
     else:
         netG = torch.load(f'{os.path.dirname(os.path.abspath(__file__))}/modules/images_generator/{module_names[0]}')
         netD = torch.load(f'{os.path.dirname(os.path.abspath(__file__))}/modules/images_generator/{module_names[1]}')
@@ -176,15 +179,11 @@ def save_module(*, should_save_model: bool, module_names: tuple[str, str] = ('',
 def main():
     create_new_module(should_create_new_module=True)
 
-    netG.apply(weights_init)
-    netD.apply(weights_init)
-
     optimizer()
     learn(num_epochs=20)
 
-    show_result()
-
     save_module(should_save_model=True, module_names=('_test', '_test'))
+    show_result()
 
 if __name__ == '__main__':
     main()

@@ -1,5 +1,3 @@
-import subprocess
-import sys
 import os
 import torch
 import torch.nn as nn
@@ -27,6 +25,8 @@ def init_variables() -> None:
     ngf = 64
     ndf = 64
     nc = 3
+
+init_variables()
 
 
 class Generator(nn.Module):
@@ -85,8 +85,6 @@ def weights_init(m) -> None:
         nn.init.normal_(m.weight.data, 1.0, 0.02)
         nn.init.constant_(m.bias.data, 0)
 
-init_variables()
-
 netG = Generator(nz, ngf, nc).to(device)
 netD = Discriminator(ndf, nc).to(device)
 
@@ -97,8 +95,8 @@ def create_new_module() -> None:
 def load_module(*, name_of_modules: tuple[str, str]) -> None:
     global netG, netD
 
-    netG = torch.load(f'{os.path.dirname(os.path.abspath(__file__))}/modules/five_generator/{name_of_modules[0]}')
-    netD = torch.load(f'{os.path.dirname(os.path.abspath(__file__))}/modules/five_generator/{name_of_modules[1]}')
+    netG.load_state_dict(torch.load(f'{os.path.dirname(os.path.abspath(__file__))}/modules/five_generator/{name_of_modules[0]}'))
+    netD.load_state_dict(torch.load(f'{os.path.dirname(os.path.abspath(__file__))}/modules/five_generator/{name_of_modules[1]}'))
 
 def optimizer() -> None:
     global optimizerD, optimizerG, criterion
@@ -153,29 +151,30 @@ def show_result(*, should_show_result: bool = True) -> None:
     plt.imshow(fake[0].permute(1, 2, 0) * 0.5 + 0.5)
     plt.show()
 
-def save_module(*, should_save_module: bool, name_of_modules: tuple[str, str]) -> None:
+def save_module(*, should_save_module: bool, name_of_modules: tuple[str, str] = ('', '')) -> None:
     if not should_save_module: return
 
-    torch.save(netG.state_dict(), f'{os.path.dirname(os.path.abspath(__file__))}/modules/five_generator/NetG{name_of_modules[0]}.pth')
-    torch.save(netD.state_dict(), f'{os.path.dirname(os.path.abspath(__file__))}/modules/five_generator/NetD{name_of_modules[1]}.pth')
+    torch.save(netG.state_dict(), f'*/modules/five_generator/NetG{name_of_modules[0]}.pth')
+    torch.save(netD.state_dict(), f'*/modules/five_generator/NetD{name_of_modules[1]}.pth')
 
 def main() -> None:
     should_create_new_module = input('Create a new module? [y/n] --> ').lower().strip()
 
     match should_create_new_module:
         case 'y': create_new_module()
-        case other: load_module(name_of_modules=(input('Name of modules which will load "NetG.pth NetD.pth"--> ').split()))
+        case _: load_module(name_of_modules=(input('Name of modules which will load "NetG.pth NetD.pth"--> ').split()))
 
     num_epochs = int(input("Number of epochs --> "))
     should_show_result = bool(input('Show result? [y/"NOTHING"] --> ').lower().strip())
     should_save_module = bool(input('Save the module? [y/"NOTHING"] --> ').lower().strip())
+    name_of_modules = ('', '')
     if should_save_module: name_of_modules = (input('Name of new modules "_test _test"--> ').split())
 
     optimizer()
     learn(num_epochs=num_epochs)
 
-    show_result(should_show_result=should_show_result)
     save_module(should_save_module=should_save_module, name_of_modules=name_of_modules)
+    show_result(should_show_result=should_show_result)
 
 if __name__ == '__main__':
     main()
