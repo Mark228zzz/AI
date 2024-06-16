@@ -19,7 +19,7 @@ def init_variables() -> None:
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
     ])
 
-    dataset = datasets.ImageFolder(root=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'face_generator'), transform=transform)
+    dataset = datasets.ImageFolder(root=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'five_generator'), transform=transform)
     dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
 
     nz = 100
@@ -96,8 +96,8 @@ def create_new_module() -> None:
 def load_module(*, name_of_modules: tuple[str, str]) -> None:
     global netG, netD
 
-    netG.load_state_dict(torch.load(f'{os.path.dirname(os.path.abspath(__file__))}/modules/face_generator/{name_of_modules[0]}'))
-    netD.load_state_dict(torch.load(f'{os.path.dirname(os.path.abspath(__file__))}/modules/face_generator/{name_of_modules[1]}'))
+    netG.load_state_dict(torch.load(f'{os.path.dirname(os.path.abspath(__file__))}/modules/five_generator/{name_of_modules[0]}'))
+    netD.load_state_dict(torch.load(f'{os.path.dirname(os.path.abspath(__file__))}/modules/five_generator/{name_of_modules[1]}'))
 
 def optimizer() -> None:
     global optimizerD, optimizerG, criterion
@@ -139,9 +139,12 @@ def learn(*, num_epochs: int) -> None:
 
         print(f'Epoch {epoch + 1}/{num_epochs} [{i + 1}/{len(dataloader)}] Loss_D: {errD.item():.4f} Loss_G: {errG.item():.4f} D(x): {D_x:.4f} D(G(z1)): {D_G_z1:.4f} D(G(z2)): {D_G_z2:.4f}')
 
-        show_result(should_show=False, should_save_result=True)
+        if epoch + 1 >= num_epochs:
+            show_result(should_show=False, should_save_result=True, title=f'Epoch: {epoch}')
+        elif epoch % 25 == 0:
+            show_result(should_show=False, should_save_result=True, title=f'Epoch: {epoch}')
 
-def show_result(*, should_show_result: bool = True, should_show: bool = True, should_save_result: bool = False) -> None:
+def show_result(*, should_show_result: bool = True, should_show: bool = True, should_save_result: bool = False, title: str = 'Generated image') -> None:
     if not should_show_result: return
 
     with torch.no_grad():
@@ -150,7 +153,7 @@ def show_result(*, should_show_result: bool = True, should_show: bool = True, sh
 
     plt.figure(figsize=(5,5))
     plt.axis("off")
-    plt.title("Generated Image")
+    plt.title(title)
     plt.imshow(fake[0].permute(1, 2, 0) * 0.5 + 0.5)
     if should_show: plt.show()
     if should_save_result: plt.savefig(f'{os.path.dirname(os.path.abspath(__file__))}/pictures/{datetime.now()}.png')
@@ -178,7 +181,7 @@ def main() -> None:
     learn(num_epochs=num_epochs)
 
     save_module(should_save_module=should_save_module, name_of_modules=name_of_modules)
-    show_result(should_show_result=should_show_result)
+    show_result(should_show_result=should_show_result, should_save_result=True)
 
 if __name__ == '__main__':
     main()
